@@ -1,9 +1,10 @@
+
 # PostgreSQL + pgvector RAGデモアプリケーション
 ![gamen_optimized](https://github.com/user-attachments/assets/210760a9-322c-4519-94e1-2373b0b4b23f)
 
 本アプリケーションは、RAG（Retrieval-Augmented Generation）システムの実装例として、PostgreSQL + pgvectorを使用したベクトル検索とAI回答生成の一連の流れを体験できるサンプルアプリです。
 
-## 🌟 主要能
+## 🌟 主要機能
 
 ### 📁 ファイルアップロード機能
 - **対応形式**: PDF、テキストファイル (.txt)、Markdown (.md)
@@ -66,8 +67,28 @@ git clone <repository-url>
 cd sample-rag-app
 ```
 
-### 2. PostgreSQLサーバーの起動
+### 2. 環境変数の設定
+
+バックエンドディレクトリに`.env`ファイルを作成します：
+
 ```bash
+cd backend
+
+# .envファイルを作成
+cat > .env << EOF
+DATABASE_URL=postgresql://postgres:password@localhost:5433/rag_db
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=5001
+EOF
+```
+
+**重要**: `OPENAI_API_KEY`を実際のAPIキーに置き換えてください。
+
+### 3. PostgreSQLサーバーの起動
+```bash
+# プロジェクトルートディレクトリに戻る
+cd ..
+
 # Docker Composeを使用してPostgreSQL + pgvectorを起動
 docker-compose up -d
 
@@ -75,25 +96,22 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### 3. バックエンドのセットアップ
+### 4. バックエンドのセットアップ
 ```bash
 cd backend
 
 # 依存関係のインストール
 npm install
 
-# 環境変数の設定
-# .envファイルが既に設定済み:
-# DATABASE_URL=postgresql://postgres:password@localhost:5432/rag_db
-# OPENAI_API_KEY=your_openai_api_key_here
-# PORT=5001
-
 # サーバーの起動
 npm start
 ```
 
-### 4. フロントエンドのセットアップ
+初回起動時にデータベースとテーブルが自動的に作成されます。
+
+### 5. フロントエンドのセットアップ
 ```bash
+# 新しいターミナルウィンドウで
 cd frontend
 
 # 依存関係のインストール
@@ -103,10 +121,10 @@ npm install
 npm run dev
 ```
 
-### 5. アプリケーションへのアクセス
+### 6. アプリケーションへのアクセス
 - フロントエンド: http://localhost:5173
 - バックエンドAPI: http://localhost:5001
-- PostgreSQL: localhost:5432
+- PostgreSQL: localhost:5433
 
 ## 🚀 使い方
 
@@ -146,11 +164,11 @@ npm run dev
 
 ## 🔧 設定ファイル
 
-### バックエンド (.env)
+### 環境変数設定 (.env)
 ```env
-QDRANT_URL=http://localhost:6333
-OPENAI_API_KEY=your_api_key_here
-PORT=3000
+DATABASE_URL=postgresql://postgres:password@localhost:5433/rag_db
+OPENAI_API_KEY=your_openai_api_key_here
+PORT=5001
 ```
 
 ### サポートファイル形式
@@ -193,26 +211,25 @@ const results = await search(query, 10); // 10件取得
 
 ### よくある問題
 
-**Qdrantに接続できない**
-- Qdrantサーバーが起動しているか確認
-- 環境変数 `QDRANT_URL` が正しく設定されているか確認
+**PostgreSQLに接続できない**
+- Dockerコンテナが起動しているか確認: `docker-compose ps`
+- ポート5433が他のアプリケーションで使用されていないか確認
+- DATABASE_URLのポート番号が5433になっているか確認
 
 **ファイルアップロードが失敗する**
 - ファイルサイズが10MB以下か確認
 - サポートされているファイル形式か確認
+- uploadsディレクトリが作成されているか確認
 
 **OpenAI API エラー**
 - API キーが正しく設定されているか確認
 - API使用量制限に達していないか確認
+- インターネット接続を確認
+
+**pgvector拡張が見つからない**
+- pgvector対応のPostgreSQLイメージを使用しているか確認
+- `docker-compose.yml`で`pgvector/pgvector:pg16`イメージを指定しているか確認
 
 ## 📄 ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。
-
-## 🤝 コントリビューション
-
-プルリクエストやイシューの報告を歓迎します。改善提案がある場合は、ぜひお聞かせください。
-
-## 📞 サポート
-
-質問やサポートが必要な場合は、GitHubのIssueを作成してください。
