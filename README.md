@@ -1,5 +1,5 @@
 # PostgreSQL + pgvector RAGデモアプリケーション
-![Uploading gamen_optimized.gif…]()
+![gamen_optimized](https://github.com/user-attachments/assets/210760a9-322c-4519-94e1-2373b0b4b23f)
 
 本アプリケーションは、RAG（Retrieval-Augmented Generation）システムの実装例として、PostgreSQL + pgvectorを使用したベクトル検索とAI回答生成の一連の流れを体験できるサンプルアプリです。
 
