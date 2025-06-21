@@ -1,217 +1,141 @@
-# PostgreSQL + pgvector RAGデモアプリケーション
+# ベクトル検索とRAG作成サンプルアプリ
 
-本アプリケーションは、RAG（Retrieval-Augmented Generation）システムの実装例として、PostgreSQL + pgvectorを使用したベクトル検索とAI回答生成の一連の流れを体験できるサンプルアプリです。
+## システム構成
 
-## 🌟 主要能
-
-### 📁 ファイルアップロード機能
-- **対応形式**: PDF、テキストファイル (.txt)、Markdown (.md)
-- **自動チャンキング**: 長い文書を意味のある単位で自動分割
-- **メタデータ管理**: ファイル名、種別、アップロード日時などの情報をJSONBで保存
-
-### 🤖 RAG質問システム
-- **自然言語質問**: アップロードした文書について自然言語で質問
-- **コンテキスト検索**: 質問に関連する文書をベクトル類似度で自動検索
-- **根拠付き回答**: 回答の根拠となるソース文書を表示
-- **応答時間表示**: 処理時間とトークン使用量を表示
-
-### 🔍 ベクトル検索機能
-- **意味的検索**: キーワードマッチングではなく、意味的類似性で検索
-- **類似度スコア**: 各検索結果の類似度を数値で表示
-- **高速検索**: HNSWインデックスによる高速ベクトル検索
-
-### 📚 ドキュメント管理
-- **一覧表示**: 登録済みドキュメントをファイル別にグループ化表示
-- **メタデータ表示**: ファイル種別、チャンク番号、登録日時などの詳細情報
-- **削除機能**: 個別またはバッチでのドキュメント削除
-
-### 📊 システム統計
-- **リアルタイム統計**: 登録ドキュメント数、ベクトル数などの状況表示
-- **ファイル種別統計**: アップロードされたファイルの種類別集計
-- **データベース状態**: PostgreSQLの健全性監視
-
-## 🏗️ 技術スタック
-
-### バックエンド
-- **Runtime**: Node.js + TypeScript
-- **Framework**: Express.js
-- **Database**: PostgreSQL 16 + pgvector
-- **Embeddings**: OpenAI text-embedding-3-small
-- **LLM**: OpenAI GPT-4
-- **File Processing**: pdf-parse, multer
-
-### フロントエンド
-- **Framework**: React + TypeScript
-- **Build Tool**: Vite
-- **Styling**: Inline CSS (no external dependencies)
-- **HTTP Client**: Axios
-
-### データベース
-- **RDBMS**: PostgreSQL 16
-- **Vector Extension**: pgvector
-- **Vector Index**: HNSW (Hierarchical Navigable Small World)
-- **Distance Metric**: Cosine Similarity
-
-## 📋 セットアップ手順
-
-### 前提条件
-- Docker & Docker Compose
-- Node.js (v18以上)
-- OpenAI API キー
-
-### 1. リポジトリのクローン
-```bash
-git clone <repository-url>
-cd sample-rag-app
+```mermaid
+flowchart LR
+    FE[フロントエンド<br/>React + TypeScript + Vite]
+    BE[バックエンド<br/>Node.js + Express.js + TypeScript]
+    DB[(PostgreSQL16＋pgvector<br/>HNSWインデックス)]
+    OA((OpenAI<br/>Embeddings & GPT-4))
+    FE --> BE
+    BE --> DB
+    BE --> OA
 ```
 
-### 2. PostgreSQLサーバーの起動
-```bash
-# Docker Composeを使用してPostgreSQL + pgvectorを起動
-docker-compose up -d
+## 🚀 起動手順
 
-# 起動確認
-docker-compose ps
+> **前提**: Docker（Compose）、Node.js、OpenAI API キー を用意済みとする
+
+1. **リポジトリをクローン**
+
+   ```bash
+   git clone <repository-url>
+   cd sample-rag-app
+   ```
+
+2. **環境変数を設定**
+
+   * **バックエンド**
+
+     ```bash
+     cd backend
+     cat > .env << EOF
+     DATABASE_URL=postgresql://postgres:password@localhost:5433/rag_db
+     OPENAI_API_KEY=your_openai_api_key
+     PORT=5001
+     EOF
+     ```
+
+3. **PostgreSQL＋pgvector を立ち上げ**
+
+   ```bash
+   cd ..
+   docker-compose up -d
+   docker-compose ps   # 正常起動を確認
+   ```
+
+4. **バックエンドを起動**
+
+   ```bash
+   cd backend
+   npm install
+   npm start           # または npm run dev
+   ```
+
+5. **フロントエンドを起動**
+
+   ```bash
+   # 別ターミナルで
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+6. **ブラウザでアクセス**
+
+   * フロントエンド → [http://localhost:5173](http://localhost:5173)
+   * バックエンド API → [http://localhost:5001](http://localhost:5001)
+
+---
+
+## 📑 設計書（概要）
+
+### 1. システム全体構成
+
+```
+[フロントエンド] ←→ [バックエンドAPI] ←→ [PostgreSQL＋pgvector]
+                         ↓
+                    [OpenAI API]
 ```
 
-### 3. バックエンドのセットアップ
-```bash
-cd backend
+* **フロントエンド**
 
-# 依存関係のインストール
-npm install
+  * React + TypeScript + Vite
+  * Axios で API 呼び出し
+* **バックエンド**
 
-# 環境変数の設定
-# .envファイルが既に設定済み:
-# DATABASE_URL=postgresql://postgres:password@localhost:5432/rag_db
-# OPENAI_API_KEY=your_openai_api_key_here
-# PORT=5001
+  * Node.js + TypeScript + Express.js
+  * ファイル受け取り → チャンク化 → pgvector 登録
+  * RAG 質問 → ベクトル検索 → OpenAI 呼び出し
+* **データベース**
 
-# サーバーの起動
-npm start
-```
+  * PostgreSQL 16
+  * pgvector 拡張（HNSW インデックス）
+* **外部サービス**
 
-### 4. フロントエンドのセットアップ
-```bash
-cd frontend
+  * OpenAI Embedding（text-embedding-3-small）
+  * OpenAI GPT-4（回答生成）
 
-# 依存関係のインストール
-npm install
+---
 
-# 開発サーバーの起動
-npm run dev
-```
+### 2. 主要機能とデータフロー
 
-### 5. アプリケーションへのアクセス
-- フロントエンド: http://localhost:5173
-- バックエンドAPI: http://localhost:5001
-- PostgreSQL: localhost:5432
+| 機能         | 説明                                                     | フロー概要                                  |
+| ---------- | ------------------------------------------------------ | -------------------------------------- |
+| ファイルアップロード | PDF/TXT/MD を受け取り、自動で意味に沿ったチャンクに分割し、メタデータとともに JSONB で保存 | クライアント → `/api/upload` → DB登録          |
+| ベクトル検索     | チャンク文本体を埋め込み化し、pgvector で類似度検索                         | `/api/search?query=` → pgvector → 結果返却 |
+| RAG 質問     | 質問文を埋め込み化 → 類似チャンク検索 → GPT-4 にプロンプト送信 → 根拠付き回答を返却      | `/api/ask` → 検索 → GPT-4 → 回答表示         |
+| ドキュメント管理   | 登録済ドキュメント一覧表示・個別／一括削除                                  | `/api/documents` → 表示・削除               |
+| システム統計     | 登録件数・ベクトル数・検索速度などのリアルタイム統計                             | `/api/stats` → ダッシュボードに表示              |
 
-## 🚀 使い方
+---
 
-### ステップ1: ファイルアップロード
-1. 「📁 ファイルアップロード」タブを選択
-2. PDF、テキスト、またはMarkdownファイルをアップロード
-3. ファイルが自動的にチャンクに分割され、ベクトル化されて保存されます
+### 3. 技術スタック
 
-### ステップ2: RAG質問
-1. 「🤖 RAG質問」タブを選択
-2. アップロードした文書の内容について質問を入力
-3. AIが関連する文書を検索し、根拠付きで回答を生成します
+* **バックエンド**
 
-### ステップ3: ベクトル検索体験
-1. 「🔍 ベクトル検索」タブを選択
-2. 検索キーワードを入力
-3. 意味的に類似した文書が類似度スコア付きで表示されます
+  * Node.js 18+ / TypeScript / Express.js
+  * pdf-parse, multer（ファイル処理）
+* **フロントエンド**
 
-### ステップ4: ドキュメント管理
-1. 「📚 ドキュメント管理」タブを選択
-2. 登録済みドキュメントの確認・削除が可能です
+  * React / TypeScript / Vite
+  * Inline CSS, Axios
+* **DB・検索**
 
-## 📡 API エンドポイント
+  * PostgreSQL 16 + pgvector
+  * HNSW インデックス, Cosine 類似度
+* **AI**
 
-### ファイル操作
-- `POST /api/upload` - ファイルアップロードとチャンキング
-- `GET /api/documents` - ドキュメント一覧取得
-- `DELETE /api/documents/:id` - ドキュメント削除
+  * OpenAI text-embedding-3-small, GPT-4
 
-### 検索・RAG
-- `GET /api/search` - ベクトル検索
-- `POST /api/ask` - RAG質問回答
-- `POST /api/upsert` - 手動ドキュメント登録
+---
 
-### システム情報
-- `GET /api/stats` - システム統計情報
+### ⚙️ カスタマイズポイント
 
-## 🔧 設定ファイル
-
-### バックエンド (.env)
-```env
-QDRANT_URL=http://localhost:6333
-OPENAI_API_KEY=your_api_key_here
-PORT=3000
-```
-
-### サポートファイル形式
-- **PDF**: application/pdf
-- **テキスト**: text/plain
-- **Markdown**: text/markdown
-
-### ファイルサイズ制限
-- 最大ファイルサイズ: 10MB
-- チャンクサイズ: 1500文字（オーバーラップ150文字）
-
-## 🛠️ カスタマイズ
-
-### チャンキング設定の変更
-`backend/src/fileProcessor.ts` の `chunkText` 関数でパラメータを調整:
-```typescript
-const chunks = chunkText(extractedText, 1500, 150); // (テキスト, サイズ, オーバーラップ)
-```
-
-### 検索結果数の変更
-デフォルトは5件ですが、APIリクエストの `k` パラメータで調整可能:
-```typescript
-const results = await search(query, 10); // 10件取得
-```
-
-### プロンプトのカスタマイズ
-`backend/src/ragService.ts` の `generateRAGAnswer` 関数でプロンプトを調整可能
-
-## 📚 学習リソース
-
-このアプリケーションで学べる概念:
-
-1. **RAGアーキテクチャ**: 検索拡張生成の仕組み
-2. **ベクトル検索**: 意味的類似性に基づく検索
-3. **チャンキング戦略**: 長文書の効果的な分割手法
-4. **埋め込み（Embeddings）**: テキストのベクトル化
-5. **プロンプトエンジニアリング**: 効果的なAI回答生成
-
-## 🐛 トラブルシューティング
-
-### よくある問題
-
-**Qdrantに接続できない**
-- Qdrantサーバーが起動しているか確認
-- 環境変数 `QDRANT_URL` が正しく設定されているか確認
-
-**ファイルアップロードが失敗する**
-- ファイルサイズが10MB以下か確認
-- サポートされているファイル形式か確認
-
-**OpenAI API エラー**
-- API キーが正しく設定されているか確認
-- API使用量制限に達していないか確認
-
-## 📄 ライセンス
-
-このプロジェクトはMITライセンスの下で公開されています。
-
-## 🤝 コントリビューション
-
-プルリクエストやイシューの報告を歓迎します。改善提案がある場合は、ぜひお聞かせください。
-
-## 📞 サポート
-
-質問やサポートが必要な場合は、GitHubのIssueを作成してください。
+* **チャンク設定**
+  `backend/src/fileProcessor.ts` の `chunkText(text, size, overlap)` を調整
+* **検索件数**
+  API リクエスト時の `k` パラメータで変更可能
+* **プロンプト編集**
+  `backend/src/ragService.ts` の `generateRAGAnswer` 関数を編集
